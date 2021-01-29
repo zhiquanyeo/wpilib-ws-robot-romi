@@ -330,6 +330,10 @@ export default class WPILibWSRomiRobot extends WPILibWSRobotBase {
             // Positive values here correspond to forward motion
             const romiValue = Math.floor(((value / 255) * 800) - 400);
 
+            if (romiValue !== 0) {
+                console.log(`PWM(${channel}) set to ${romiValue}`);
+            }
+
             // We need to do some trickery to get a twos-complement number
             // Essentially we'll write a 16 bit signed int to the buffer
             // and read it out as an unsigned int
