@@ -159,10 +159,12 @@ export default class WPILibWSRomiRobot extends WPILibWSRobotBase {
 
                 // Set up the heartbeat
                 this._heartbeatTimer = setInterval(() => {
-                    this._i2cHandle.writeByte(RomiDataBuffer.heartbeat.offset, 1)
-                    .catch(err => {
-                        this._i2cErrorDetector.addErrorInstance();
-                    });
+                    if (this._numWsConnections > 0) {
+                        this._i2cHandle.writeByte(RomiDataBuffer.heartbeat.offset, 1)
+                        .catch(err => {
+                            this._i2cErrorDetector.addErrorInstance();
+                        });
+                    }
                 }, 100);
 
                 // Set up the read timer
