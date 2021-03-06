@@ -76,6 +76,14 @@ enum RegAddr {
 const DS33_WHO_ID = 0x69;
 const IF_INC_ENABLED = 0x04;
 
+export enum GyroHPFilterMode {
+    DISABLED = "GYRO_HP_CUTOFF_DISABLED",
+    CUTOFF_0_0081 = "CUTOFF_0_0081",
+    CUTOFF_0_0324 = "CUTOFF_0_0324",
+    CUTOFF_2_07 = "CUTOFF_2_07",
+    CUTOFF_16_32 = "CUTOFF_16_32"
+}
+
 // Range scales for the accelerometer
 export enum AccelerometerScale {
     SCALE_2G = "SCALE_2G",
@@ -112,6 +120,13 @@ GYRO_SCALE_CTRL_BYTE.set(GyroScale.SCALE_500_DPS, 0x44);
 GYRO_SCALE_CTRL_BYTE.set(GyroScale.SCALE_1000_DPS, 0x48);
 GYRO_SCALE_CTRL_BYTE.set(GyroScale.SCALE_2000_DPS, 0x4C);
 
+const GYRO_HIGH_PASS_FILTER_BYTE: Map<GyroHPFilterMode, number> = new Map<GyroHPFilterMode, number>();
+GYRO_HIGH_PASS_FILTER_BYTE.set(GyroHPFilterMode.DISABLED, 0x08);
+GYRO_HIGH_PASS_FILTER_BYTE.set(GyroHPFilterMode.CUTOFF_0_0081, 0x48);
+GYRO_HIGH_PASS_FILTER_BYTE.set(GyroHPFilterMode.CUTOFF_0_0324, 0x58);
+GYRO_HIGH_PASS_FILTER_BYTE.set(GyroHPFilterMode.CUTOFF_2_07, 0x68);
+GYRO_HIGH_PASS_FILTER_BYTE.set(GyroHPFilterMode.CUTOFF_16_32, 0x78);
+
 // Sensitivity in mg/LSB
 const ACCEL_OUTPUT_SCALE_FACTOR: Map<AccelerometerScale, number> = new Map<AccelerometerScale, number>();
 ACCEL_OUTPUT_SCALE_FACTOR.set(AccelerometerScale.SCALE_2G, 0.061);
@@ -126,6 +141,8 @@ GYRO_OUTPUT_SCALE_FACTOR.set(GyroScale.SCALE_250_DPS, 8.75);
 GYRO_OUTPUT_SCALE_FACTOR.set(GyroScale.SCALE_500_DPS, 17.5);
 GYRO_OUTPUT_SCALE_FACTOR.set(GyroScale.SCALE_1000_DPS, 35);
 GYRO_OUTPUT_SCALE_FACTOR.set(GyroScale.SCALE_2000_DPS, 70);
+
+
 
 export interface LSM6Config {
     accelOffset?: Vector3;
@@ -146,6 +163,8 @@ export default class LSM6 {
 
     private _accelerometerScale: AccelerometerScale = AccelerometerScale.SCALE_2G;
     private _gyroScale: GyroScale = GyroScale.SCALE_250_DPS;
+
+    private _gyroHPFilterMode: GyroHPFilterMode = GyroHPFilterMode.DISABLED;
 
     constructor(bus: I2CPromisifiedBus, address: number, config?: LSM6Config) {
         this._i2cAddress = address;
@@ -212,6 +231,7 @@ export default class LSM6 {
 
         // Common
         await this._writeByte(RegAddr.CTRL3_C, IF_INC_ENABLED);
+        await this.setGyroHPFilterMode(GyroHPFilterMode.DISABLED);
     }
 
     public async setAccelerometerScale(scale: AccelerometerScale): Promise<void> {
@@ -236,6 +256,18 @@ export default class LSM6 {
         this._gyroScale = scale;
 
         console.log(`[IMU] Gyro Scale: ${scale}`);
+    }
+
+    public async setGyroHPFilterMode(mode: GyroHPFilterMode): Promise<void> {
+        if (!this._isReady) {
+            return;
+        }
+
+        const controlByte = GYRO_HIGH_PASS_FILTER_BYTE.get(mode);
+        await this._writeByte(RegAddr.CTRL7_G, controlByte);
+        this._gyroHPFilterMode = mode;
+
+        console.log(`[IMU] Gyro HP Filter Mode: ${mode}`);
     }
 
     /**
